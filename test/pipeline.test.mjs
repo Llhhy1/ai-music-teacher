@@ -17,7 +17,7 @@ const ok = (name, cond, detail = '') => {
 /** 用演示音源走完整条管线（非实时，一次性喂完） */
 function run(timeline, mode, opts = {}) {
   const an = new Analyzer({ sampleRate: 44100, silenceRms: 0.004, ...opts });
-  an.begin({ target: mode === 'free' ? null : timeline, mode });
+  an.begin({ target: mode === 'free' ? null : timeline, mode, ...opts });
   const src = new DemoSource(timeline, (c) => an.push(c));
   let guard = 0;
   for (;;) {
@@ -177,6 +177,18 @@ console.log('\n[6] 边界与鲁棒性');
   for (let i = 0; i < 400; i++) { const c = src.render(1024); if (!c) break; an.push(c); }
   const rep = an.finalize();
   ok('省电模式帧率减半但仍可用', rep.frames > 30 && rep.frames < 160, `frames=${rep.frames}`);
+}
+{
+  // 起唱提示音会被麦克风录到，ignoreBefore 必须把这段时间的帧丢干净
+  const tw = buildTimeline(getLesson('song-twinkle'));
+  const full = run(tw, 'melody');
+  const ign = run(tw, 'melody', { ignoreBefore: 5 });
+  ok('ignoreBefore 丢弃提示音段的帧', ign.frames <= full.frames - 50,
+    `full=${full.frames} ign=${ign.frames}`);
+  ok('ignoreBefore 后首帧 ≥ 截止点', ign.series.length > 0 && ign.series[0].t >= 5 - 1e-6,
+    `firstT=${ign.series[0]?.t}`);
+  ok('ignoreBefore 不影响最终得分', inRange(ign.scores.overall, 0, 100),
+    `=${ign.scores.overall}`);
 }
 
 console.log(`\n结果: ${pass} 通过 / ${fail} 失败\n`);

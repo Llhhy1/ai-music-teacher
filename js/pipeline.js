@@ -36,11 +36,12 @@ export class Analyzer {
     this.session = null;
     this.target = null;
     this.mode = 'free';
+    this.ignoreBefore = 0;
     this.onFrame = null;
   }
 
   /** 清空缓冲，准备开始一次新练习 */
-  begin({ target = null, mode = 'free', toneBaseline } = {}) {
+  begin({ target = null, mode = 'free', toneBaseline, ignoreBefore = 0 } = {}) {
     this._hist.fill(0);
     this._w = 0;
     this._total = 0;
@@ -48,6 +49,7 @@ export class Analyzer {
     this._frames = [];
     this.target = target;
     this.mode = mode;
+    this.ignoreBefore = ignoreBefore;
     this.session = new Session({
       sampleRate: this.sampleRate,
       hop: HOP,
@@ -90,6 +92,9 @@ export class Analyzer {
     }
     const t = (this._total - WIN / 2) / this.sampleRate;
     if (t < 0) return;
+    // 起唱提示音期间的帧直接丢弃：扬声器放出的提示音会被麦克风录到，
+    // 不丢掉就会污染首音的音准/起唱统计（ignoreBefore = 首目标音时刻）
+    if (t < this.ignoreBefore) return;
 
     const d = this.detector.process(w);
     const spec = d.silence ? { centroid: 0, hfRatio: 0 } : spectralFeatures(w, this.sampleRate);

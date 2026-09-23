@@ -2,7 +2,7 @@
  * sw.js — 离线可用：应用外壳缓存 + 后台更新（stale-while-revalidate）
  * 练习数据本身不经过网络，所以缓存静态资源即可实现完全离线练习。
  */
-const CACHE = 'amt-v2';
+const CACHE = 'amt-v3';
 const SHELL = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const SHELL = [
   './js/lessons.js',
   './js/ai.js',
   './js/demo.js',
+  './js/cue.js',
   './js/recorder-worklet.js',
   './icons/icon-192.png',
   './icons/icon-512.png',

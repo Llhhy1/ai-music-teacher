@@ -2,7 +2,7 @@
  * run-all.mjs — 跑全部测试
  */
 import { spawnSync } from 'node:child_process';
-const files = ['test/dsp.test.mjs', 'test/pipeline.test.mjs'];
+const files = ['test/dsp.test.mjs', 'test/pipeline.test.mjs', 'test/lessons.test.mjs'];
 let bad = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [f], { stdio: 'inherit' });

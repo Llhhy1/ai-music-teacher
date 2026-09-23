@@ -13,6 +13,7 @@ import { Session, toAiPayload } from './metrics.js';
 import { LESSONS, COURSES, DICTATION_LINES, buildTimeline, getLesson } from './lessons.js';
 import { PRESETS, loadSettings, saveSettings, isConfigured, streamChat, buildReportMessage, localFallbackText } from './ai.js';
 import { DemoSource, buildImprov } from './demo.js';
+import { playCue } from './cue.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -289,9 +290,9 @@ class Engine {
     this.demo = new DemoSource(timeline, (chunk) => this.push(chunk));
   }
 
-  arm(target, mode) {
+  arm(target, mode, ignoreBefore = 0) {
     this.target = target;
-    this.analyzer.begin({ target, mode });
+    this.analyzer.begin({ target, mode, ignoreBefore });
     this.demo?.start();
     this._loop();
   }
@@ -360,14 +361,25 @@ async function beginSession(isDemo) {
   const mode = state.mode === 'free' ? 'free' : (lesson ? lesson.mode : 'melody');
   sessionMode = mode;
 
-  const target = mode === 'free' ? null : buildTimeline(lesson || LESSONS[0], 1.0);
+  // 预备时长按曲速给两拍（提示音要占满 leadIn，结束点=首音开始点）
+  const eff = lesson || (mode !== 'free' ? LESSONS[0] : null);
+  const spb = 60 / (eff?.bpm || 84);
+  const leadIn = eff ? Math.min(Math.max(spb * 2, 1.0), 3.0) : 1.0;
+
+  const target = mode === 'free' ? null : buildTimeline(eff || LESSONS[0], leadIn);
   // 自由清唱没有目标音高，但演示模式仍需要一段可分析的声音
   const source = target || buildImprov();
 
   engine.onFrame = updateLive;
   engine.onTick = updateTick;
   if (isDemo) engine.startDemo(source);
-  engine.arm(target, mode);
+
+  // 起唱提示音（节拍 + 首音标准音）：与录音同时开始、首目标音时刻结束；
+  // 这段的麦克风帧被 ignoreBefore 丢弃，不会混进诊断数据。演示模式不播。
+  const cueOn = !!state.cue && !isDemo && !!eff && !!target
+    && target.notes.length > 0 && (mode === 'melody' || mode === 'range');
+  engine.arm(target, mode, cueOn ? leadIn : 0);
+  if (cueOn) playCue({ leadIn, spb, midi: target.notes[0].midi });
 
   if (mode === 'free') {
     // 自由清唱：60 秒自动结束
@@ -939,6 +951,7 @@ function renderSettings() {
   $('#silRange').value = state.silenceRms;
   $('#silVal').textContent = state.silenceRms;
   $('#ecoMode').checked = state.eco;
+  $('#cueMode').checked = state.cue;
   const cnt = localStorage.getItem('amt.sessions') || '0';
   $('#storeInfo').textContent = `累计 ${cnt} 次练习`;
   refreshAiPill();
@@ -1053,6 +1066,10 @@ function bind() {
     state.eco = e.target.checked;
     localStorage.setItem('amt.eco', state.eco ? '1' : '0');
   };
+  $('#cueMode').onchange = (e) => {
+    state.cue = e.target.checked;
+    localStorage.setItem('amt.cue', state.cue ? '1' : '0');
+  };
   $('#btnClear').onclick = () => {
     if (!confirm('清除本地保存的报告和 AI 配置？')) return;
     ['amt.lastReport', 'amt.sessions', 'amt.profile', 'amt.toneBaseline'].forEach(k => localStorage.removeItem(k));
@@ -1080,6 +1097,7 @@ function bind() {
 function init() {
   state.silenceRms = parseFloat(localStorage.getItem('amt.silence') || '0.004');
   state.eco = localStorage.getItem('amt.eco') === '1';
+  state.cue = localStorage.getItem('amt.cue') !== '0';
   state.lesson = LESSONS[0];
 
   bind();
