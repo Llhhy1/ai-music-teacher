@@ -13,3 +13,7 @@ Thumbs.db
 .vercel/
 .env
 .env.local
+
+# 凭据（绝不能进仓库）
+llhhy_gh_token
+*.token
