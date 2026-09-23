@@ -1,0 +1,13 @@
+{
+  "name": "ai-music-teacher",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI 歌手养成 — 手机端 AI 声乐教练 PWA（音高/气息/共鸣/咬字诊断）",
+  "scripts": {
+    "start": "python -m http.server 8080",
+    "dev": "python -m http.server 8080",
+    "test": "node test/run-all.mjs",
+    "icons": "node tools/gen-icons.mjs"
+  }
+}

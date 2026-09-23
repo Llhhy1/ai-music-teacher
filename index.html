@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="description" content="手机端 AI 声乐教练：实时诊断音准、气息、共鸣位置与咬字，给出可执行的练习计划。">
+<title>AI 歌手养成 · 声乐教练</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">♪</div>
+      <div class="brand-text">
+        <h1>AI 歌手养成</h1>
+        <p id="statusLine">实时声学诊断 · 数据全部在本机处理</p>
+      </div>
+    </div>
+    <button class="icon-btn" id="btnAiStatus" title="AI 教师状态">🤖</button>
+  </header>
+
+  <main id="main">
+
+    <!-- ══════════ 练习 ══════════ -->
+    <section class="view active" id="view-practice">
+
+      <div class="mode-chips" id="modeChips">
+        <button class="chip active" data-mode="melody">🎸 跟唱练习</button>
+        <button class="chip" data-mode="free">🎤 自由清唱</button>
+        <button class="chip" data-mode="range">🎹 音域测试</button>
+        <button class="chip" data-mode="diction">👄 咬字校对</button>
+      </div>
+
+      <div id="dictionPane" class="card hidden">
+        <h3>咬字校对</h3>
+        <p class="muted">对着屏幕把这句唱清楚，语音识别会把你说错 / 吃掉的字标出来。</p>
+        <div class="dict-line" id="dictLine">—</div>
+        <div class="dict-result" id="dictResult"></div>
+        <div class="row gap">
+          <button class="btn ghost" id="dictPrev">上一句</button>
+          <button class="btn primary" id="dictStart">开始识别</button>
+          <button class="btn ghost" id="dictNext">下一句</button>
+        </div>
+        <p class="hint" id="dictHint"></p>
+      </div>
+
+      <div id="lessonPane">
+        <div class="section-head">
+          <h2 id="lessonTitle">选择一项练习</h2>
+          <span class="muted" id="lessonCount"></span>
+        </div>
+        <div class="lesson-list" id="lessonList"></div>
+
+        <div class="card start-card">
+          <div class="start-info">
+            <div class="start-name" id="startName">Do Re Mi 大调音阶</div>
+            <div class="start-goal muted" id="startGoal">—</div>
+          </div>
+          <div class="row gap">
+            <button class="btn ghost" id="btnDemo">▶ 演示</button>
+            <button class="btn primary" id="btnStart">开始练习</button>
+          </div>
+        </div>
+
+        <p class="hint">
+          需要麦克风权限。<b>手机上必须用 HTTPS 打开</b>（浏览器只在 https / localhost 下允许录音）。
+          戴耳机效果最好——外放会把伴奏录进去干扰检测。
+        </p>
+      </div>
+    </section>
+
+    <!-- ══════════ 报告 ══════════ -->
+    <section class="view" id="view-report">
+
+      <div id="reportEmpty" class="empty">
+        <div class="empty-icon">📊</div>
+        <p>还没有练习数据。</p>
+        <button class="btn primary" data-goto="practice">去做第一次练习</button>
+      </div>
+
+      <div id="reportBody" class="hidden">
+
+        <div class="score-card">
+          <div class="ring" id="scoreRing">
+            <svg viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+              <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"></circle>
+            </svg>
+            <div class="ring-num"><b id="scoreOverall">0</b><span>综合</span></div>
+          </div>
+          <div class="score-bars" id="scoreBars"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-head"><h3>诊断结论</h3><span class="muted" id="reportMeta"></span></div>
+          <div class="findings" id="findings"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-head"><h3>音高轨迹</h3><span class="muted" id="chartLegend"></span></div>
+          <canvas id="reportChart" class="chart"></canvas>
+          <div class="range-row" id="rangeRow"></div>
+        </div>
+
+        <div class="card ai-card">
+          <div class="section-head">
+            <h3>🤖 AI 教师点评</h3>
+            <span class="pill" id="aiPill">未接入</span>
+          </div>
+          <div id="aiReport" class="ai-out muted">接入大模型后，这里会把上面的数字转成「接下来 3 天怎么练」。</div>
+          <div class="row gap wrap">
+            <button class="btn primary" id="btnAiReport">生成本次点评</button>
+            <button class="btn ghost" id="btnAiPlan">生成 21 天计划</button>
+          </div>
+          <div class="chat" id="chatLog"></div>
+          <div class="row gap">
+            <input id="chatInput" class="input" placeholder="追问，例如：我为什么总是抢拍？">
+            <button class="btn primary" id="btnChatSend">发送</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════ 课程 ══════════ -->
+    <section class="view" id="view-course">
+      <div class="section-head"><h2>基本功</h2><span class="muted">先懂原理，再练</span></div>
+      <div id="courseList"></div>
+    </section>
+
+    <!-- ══════════ 设置 ══════════ -->
+    <section class="view" id="view-settings">
+
+      <div class="card">
+        <div class="section-head"><h3>AI 教师（大模型 API）</h3><span class="pill" id="cfgPill">未配置</span></div>
+        <label class="field">
+          <span>服务商</span>
+          <select id="cfgPreset" class="input"></select>
+        </label>
+        <label class="field">
+          <span>API 地址（Base URL）</span>
+          <input id="cfgBase" class="input" placeholder="https://api.deepseek.com/v1">
+        </label>
+        <label class="field">
+          <span>模型名</span>
+          <input id="cfgModel" class="input" placeholder="deepseek-chat">
+        </label>
+        <label class="field">
+          <span>API Key</span>
+          <input id="cfgKey" class="input" type="password" placeholder="sk-...">
+        </label>
+        <label class="field">
+          <span>转发地址（可选，解决 CORS）</span>
+          <input id="cfgProxy" class="input" placeholder="留空=直连；如 https://your-worker.workers.dev/">
+        </label>
+        <div class="row gap">
+          <button class="btn primary" id="btnSaveCfg">保存配置</button>
+          <button class="btn ghost" id="btnTestCfg">测试连通</button>
+        </div>
+        <p class="hint">Key 只存在你手机的浏览器本地（localStorage），不会上传到任何服务器。</p>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><h3>麦克风</h3></div>
+        <div class="row gap">
+          <button class="btn ghost" id="btnMicTest">检测麦克风</button>
+          <span class="muted" id="micStatus">未检测</span>
+        </div>
+        <label class="field">
+          <span>静音阈值（底噪大时调高）<b id="silVal">0.004</b></span>
+          <input id="silRange" type="range" min="0.001" max="0.03" step="0.001" value="0.004">
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="ecoMode"><span>省电模式（检测帧率减半，老手机更流畅）</span>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><h3>数据</h3></div>
+        <div class="row gap">
+          <button class="btn ghost" id="btnClear">清除本地数据</button>
+          <span class="muted" id="storeInfo">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><h3>关于</h3></div>
+        <p class="muted small">
+          本工具用 YIN 算法实时提取基频，结合谐噪比（HNR）、谱质心、音高抖动等声学指标做客观诊断。
+          它能告诉你<b>哪里不准、为什么不准</b>，但不能替代线下老师对气息支点、喉头状态的手把手纠正。
+          出现嗓子疼、持续嘶哑、唱不上去硬顶的情况，请立即停止并就医。
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" data-view="practice"><span>🎧</span>练习</button>
+    <button class="tab" data-view="report"><span>📊</span>报告</button>
+    <button class="tab" data-view="course"><span>📚</span>课程</button>
+    <button class="tab" data-view="settings"><span>⚙️</span>设置</button>
+  </nav>
+</div>
+
+<!-- ══════════ 练习全屏 ══════════ -->
+<div class="overlay hidden" id="sessionOverlay">
+  <div class="session-head">
+    <button class="icon-btn" id="btnSessionClose">✕</button>
+    <div class="session-title">
+      <b id="sessTitle">练习</b>
+      <span id="sessTimer">00:00</span>
+    </div>
+    <div class="session-score"><b id="sessScore">--</b></div>
+  </div>
+
+  <div class="countdown hidden" id="countdown"><span>3</span></div>
+
+  <canvas id="pianoRoll" class="roll"></canvas>
+
+  <div class="live-note">
+    <div class="note-main">
+      <div class="note-name" id="liveNote">--</div>
+      <div class="note-sol" id="liveSol"></div>
+    </div>
+    <div class="note-lyric" id="liveLyric"></div>
+    <div class="note-cents" id="liveCents">—</div>
+  </div>
+
+  <canvas id="centMeter" class="meter"></canvas>
+
+  <div class="stat-row">
+    <div class="stat"><span>音准</span><b id="stPitch">--</b></div>
+    <div class="stat"><span>发声</span><b id="stHnr">--</b></div>
+    <div class="stat"><span>音色</span><b id="stCent">--</b></div>
+    <div class="stat"><span>音量</span><b id="stVol">--</b></div>
+  </div>
+
+  <div class="session-ctrl">
+    <button class="btn primary big" id="btnStop">结束并出报告</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
