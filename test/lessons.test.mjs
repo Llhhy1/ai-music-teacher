@@ -61,6 +61,43 @@ console.log('\n[2] 歌曲曲谱点数与音域');
     ok('《生日快乐》句首附点节奏', bday.notes[0].b === 0.75 && bday.notes[1].b === 0.25,
       `${bday.notes[0].b}/${bday.notes[1].b}`);
   }
+
+  const legend = getLesson('song-legend');
+  ok('《传奇》存在', legend != null);
+  ok('《传奇》146 个音符条目', legend?.notes.length === 146, `n=${legend?.notes.length}`);
+  {
+    const pitches = legend.notes.filter(n => n.m != null).map(n => n.m);
+    ok('《传奇》音域 G#3–C#5', Math.min(...pitches) === 56 && Math.max(...pitches) === 73,
+      `${Math.min(...pitches)}..${Math.max(...pitches)}`);
+    // 1=E 原调：首音"只"应为 E4(64)
+    ok('《传奇》首音"只"=E4（1=E 原调）',
+      legend.notes[1].m === 64 && legend.notes[1].l === '只',
+      `${legend.notes[1].m}/${legend.notes[1].l}`);
+    // 副歌起句"宁愿相信"
+    const first = legend.notes.find(n => n.l === '宁');
+    ok('《传奇》副歌"宁"=E4', first?.m === 64, `m=${first?.m}`);
+    // 全曲 96 拍
+    const totalBeats = legend.notes.reduce((s, n) => s + n.b, 0);
+    ok('《传奇》合计 96 拍', totalBeats === 96, `b=${totalBeats}`);
+  }
+
+  const heels = getLesson('song-red-heels');
+  ok('《红色高跟鞋》存在', heels != null);
+  ok('《红色高跟鞋》46 个音符条目', heels?.notes.length === 46, `n=${heels?.notes.length}`);
+  {
+    const pitches = heels.notes.filter(n => n.m != null).map(n => n.m);
+    ok('《红色高跟鞋》音域 A3–B4', Math.min(...pitches) === 57 && Math.max(...pitches) === 71,
+      `${Math.min(...pitches)}..${Math.max(...pitches)}`);
+    // 1=D 原调：起句"该"应为 F#4(66)
+    ok('《红色高跟鞋》起句"该"=F#4（1=D 原调）',
+      heels.notes[1].m === 66 && heels.notes[1].l === '该',
+      `${heels.notes[1].m}/${heels.notes[1].l}`);
+    const last = heels.notes[heels.notes.length - 1];
+    ok('《红色高跟鞋》收在"觉"长音（1.5 拍）', last.l === '觉' && last.b === 1.5,
+      `${last.l}/${last.b}`);
+    const totalBeats = heels.notes.reduce((s, n) => s + n.b, 0);
+    ok('《红色高跟鞋》合计 30 拍', totalBeats === 30, `b=${totalBeats}`);
+  }
 }
 
 console.log('\n[3] buildTimeline 对全部曲目可用');

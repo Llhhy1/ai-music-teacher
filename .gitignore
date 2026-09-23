@@ -17,3 +17,6 @@ Thumbs.db
 # 凭据（绝不能进仓库）
 llhhy_gh_token
 *.token
+
+# 谱图转录临时文件（原图/裁条，勿入库）
+.tmp-pu/
